@@ -1,7 +1,7 @@
 all: cat
 
 cat: cat.c
-	gcc cat.c -o cat ../lib/libhelpers.so 	
+	gcc -L../lib -I../lib cat.c -lhelpers -o cat  	
 
 clean: 
 	rm -f cat
