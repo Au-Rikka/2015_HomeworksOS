@@ -32,3 +32,23 @@ ssize_t write_(int fd, void* buf, size_t count) {
 
     return bytes_write;
 }
+
+ssize_t read_until(int fd, void* buf, size_t count, char delimiter) {
+    ssize_t bytes_read = 0;
+    ssize_t cur = 1;
+    char* chars = (char*) buf;
+
+    while (cur > 0 && count > 0) {
+        cur = read(fd, buf + bytes_read, 1);
+        if (cur < 0) {
+            return cur;
+        }
+        bytes_read += cur;
+        if (chars[bytes_read] == delimiter) {
+            return bytes_read;
+        }
+        count -= cur;
+    }
+
+    return bytes_read;
+}
