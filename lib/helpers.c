@@ -39,14 +39,17 @@ ssize_t read_until(int fd, void* buf, size_t count, char delimiter) {
     char* chars = (char*) buf;
 
     while (cur > 0 && count > 0) {
-        cur = read(fd, buf + bytes_read, 1);
+        cur = read(fd, buf + bytes_read, count);
         if (cur < 0) {
             return cur;
         }
-        bytes_read += cur;
-        if (chars[bytes_read] == delimiter) {
-            return bytes_read;
+        int i;
+        for (i = bytes_read; i < bytes_read + cur; i++) {
+            if (chars[i] == delimiter) {
+                return bytes_read + cur;
+            }
         }
+        bytes_read += cur;
         count -= cur;
     }
 
