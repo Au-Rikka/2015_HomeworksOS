@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include "helpers.h"
 
-size_t const BUF_SIZE = 4096;
+size_t const BUF_SIZE = 4097;
 
 int main() {
     char* buf = (char*) malloc(BUF_SIZE);
