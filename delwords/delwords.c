@@ -1,0 +1,71 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "helpers.h"
+
+size_t const BUF_SIZE = 4096;
+int main(int argc, char *argv[]) {
+    char* buf = (char*) malloc(BUF_SIZE);
+    char write_buf[BUF_SIZE];
+
+    char* str = argv[1];
+    ssize_t len = strlen(str);
+
+    ssize_t bytes_read = 1;
+    ssize_t bytes_write = 0;
+    int offset = 0;
+    int j = 0;
+
+    while (bytes_read > 0) {
+        bytes_read = read_until(STDIN_FILENO, buf + offset, BUF_SIZE, ' ');
+        if (bytes_read < 0) {
+            perror("Input error");
+            return EXIT_FAILURE;
+        }
+
+        if (bytes_read > 0) {
+            int i;
+            int k;
+            int cnt = 0;
+            
+            for (i = offset; i < bytes_read + offset; i++) {
+                if (buf[i] == str[j]) {
+                    j++;
+                } else {
+                    for (k = 0; k < j; k++) {
+                        write_buf[cnt] = str[k];
+                        cnt++;
+                    }
+                    write_buf[cnt] = buf[i];
+                    cnt++;
+                    j = 0;
+                }
+                if (j == len) {
+                    j = 0;
+                }
+            }
+
+            bytes_write = write_(STDOUT_FILENO, write_buf, cnt);
+            if (bytes_write < 0) {
+                perror("Output error");
+                return EXIT_FAILURE;
+            }
+            
+            offset = j;
+            buf += bytes_read;
+            for (i = 0; i < j; i++) {
+                buf[i] = str[i];
+            }
+        }
+    }
+
+    if (j > 0 && j < len) {
+        bytes_write = write_(STDOUT_FILENO, write_buf, j);
+        if (bytes_write < 0) {
+            perror("Output error");
+            return EXIT_FAILURE;
+        }
+    }
+
+    return EXIT_SUCCESS;
+}
