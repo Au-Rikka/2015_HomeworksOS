@@ -55,3 +55,34 @@ ssize_t read_until(int fd, void* buf, size_t count, char delimiter) {
 
     return bytes_read;
 }
+
+
+
+int spawn(const char * file, char * const argv []) {
+    pid_t p = fork();
+    if (p == -1) {
+        perror("Cannot fork");
+        return -1;
+    }
+
+    if (p == 0) {
+        //child
+        return execvp(file, argv);
+    }
+    
+    //parent
+    int status;
+    wait(&status);
+    if (status == -1) {
+        perror("Cannot wait");
+        return -1;
+    }
+
+    if (WIFEXITED(status)) {
+        return WEXITSTATUS(status);
+    } else {
+        perror("exit error");
+        return -1;
+    }
+
+}
