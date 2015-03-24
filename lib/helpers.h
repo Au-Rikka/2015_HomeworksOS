@@ -1,8 +1,9 @@
 #ifndef HELPERS_H
 
 #define HELPERS_H
-#include <stdio.h>
+
 #include <unistd.h>
+#include <stdio.h>
 #include <sys/wait.h>
 #include <sys/types.h>
 
