@@ -17,20 +17,51 @@ struct buf_t *buf_new(size_t capacity)  {
 }
 
 void buf_free(struct buf_t* bufer) {
+	#ifdef DEBUG
+		if (buffer == NULL) {
+			abort();
+		}
+	#endif
+
 	free(bufer->buf);
 	free(bufer);
 }
 
 size_t buf_capacity(struct buf_t* bufer) {
+	#ifdef DEBUG
+		if (buffer == NULL) {
+			abort();
+		}
+	#endif
+
 	return bufer->capacity;
 }
 
 size_t buf_size(struct buf_t* bufer) {
+	#ifdef DEBUG
+		if (buffer == NULL) {
+			abort();
+		}
+	#endif
+
 	return bufer->size;
 }
 
 ssize_t buf_fill(int fd, struct buf_t* buffer, size_t required) {
+	#ifdef DEBUG
+		if (buffer == NULL) {
+			abort();
+		}
+		if (required > buffer->capacity) {
+			abort();
+		}
+	#endif 
+
 	size_t bytes_read = 1;
+	if (required > buffer->capacity) {
+		required = buffer->capacity;
+	}
+
 	while (bytes_read > 0 && buffer->size < required) {
 		bytes_read = read(fd, buffer->buf + buffer->size, buffer->capacity - buffer->size);
 		if (bytes_read < 0) {
@@ -43,6 +74,12 @@ ssize_t buf_fill(int fd, struct buf_t* buffer, size_t required) {
 }
 
 ssize_t buf_flush(int fd, struct buf_t* buffer, size_t required) {
+	#ifdef DEBUG
+		if (buffer == NULL) {
+			abort();
+		}
+	#endif
+
 	size_t bytes_write = 1;
 	size_t offset = 0;
 
