@@ -24,4 +24,7 @@ size_t buf_size(struct buf_t* buffer);
 ssize_t buf_fill(int fd, struct buf_t* buffer, size_t required);
 ssize_t buf_flush(int fd, struct buf_t* buffer, size_t required);
 
+ssize_t buf_getline(int fd, struct buf_t* buffer, char* dest);
+ssize_t buf_write(int fd, struct buf_t* buffer, char* src, size_t len);
+
 #endif

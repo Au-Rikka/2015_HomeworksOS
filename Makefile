@@ -5,6 +5,7 @@ all:
 	make -C delwords/
 	make -C filter/
 	make -C bufcat/
+	make -C buffilter/
 
 clean:
 	make clean -C lib/
@@ -13,3 +14,4 @@ clean:
 	make clean -C delwords/
 	make clean -C filter/
 	make clean -C bufcat/
+	make clean -C buffilter/
