@@ -6,6 +6,7 @@ all:
 	make -C filter/
 	make -C bufcat/
 	make -C buffilter/
+	make -C filesender/
 
 clean:
 	make clean -C lib/
@@ -15,3 +16,4 @@ clean:
 	make clean -C filter/
 	make clean -C bufcat/
 	make clean -C buffilter/
+	make clean -C filesender/
