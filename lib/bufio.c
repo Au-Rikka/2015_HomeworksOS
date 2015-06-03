@@ -20,7 +20,7 @@ struct buf_t *buf_new(size_t capacity)  {
 
 void buf_free(struct buf_t* bufer) {
 	#ifdef DEBUG
-		if (buffer == NULL) {
+		if (bufer == NULL) {
 			abort();
 		}
 	#endif
@@ -31,7 +31,7 @@ void buf_free(struct buf_t* bufer) {
 
 size_t buf_capacity(struct buf_t* bufer) {
 	#ifdef DEBUG
-		if (buffer == NULL) {
+		if (bufer == NULL) {
 			abort();
 		}
 	#endif

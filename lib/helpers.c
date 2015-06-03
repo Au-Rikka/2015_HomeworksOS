@@ -43,6 +43,7 @@ ssize_t read_until(int fd, void* buf, size_t count, char delimiter) {
         if (cur < 0) {
             return cur;
         }
+        
         int i;
         for (i = bytes_read; i < bytes_read + cur; i++) {
             if (chars[i] == delimiter) {
@@ -84,5 +85,88 @@ int spawn(const char * file, char * const argv []) {
         perror("exit error");
         return -1;
     }
+}
+
+
+///////////////////////////////////////////////////////////////////////
+
+/*
+void exacargs_free(struct exacargs_t* ea, int kol {
+    #ifdef DEBUG
+        if (ea == NULL) {
+            abort();
+        }
+    #endif
+
+    int i;
+    for (i = 0; i < kol; i++) {
+        free(ea->args[i]);
+    }
+
+    free(ea->args);
+    free(ea);
+}
+
+
+struct exacargs_t* exacargs_new(char** args, size_t kol) {
+    struct execargs_t* ea = (struct execargs_t*) malloc(sizeof(struct execargs_t));
+    if (ea == NULL) {
+        return NULL;
+    }
+
+    ea->args = (char**) malloc((kol + 1) * sizeof(char*));
+    if (ea == NULL) {
+        return NULL:
+    }
+    ea->kol = kol;
+
+    size_t i;
+    for (i = 0; i < kol; i++) {
+        ea->args[i] = args[i]; //strdup(args[i])
+        if (ea->args[i] == NULL) {
+            exacargs_free(ea, i);
+            return NULL:
+        }
+    }    
+    ea->args[kol] = NULL:
+
+    return ea;
+}
+
+
+int exec(execargs_t* args) {
+    pid_t p = fork();
+
+    if (p == -1) {
+        perror("Cannot fork");
+        return -1;
+    }
+
+    if (p == 0) {
+        //child
+        return execvp(file, argv);
+    }
+    
+    //parent
+    int status;
+    wait(&status);
+    if (status == -1) {
+        perror("Cannot wait");
+        return -1;
+    }
+
+    if (WIFEXITED(status)) {
+        return WEXITSTATUS(status);
+    } else {
+        perror("exit error");
+        return -1;
+    }
+}
+
+int runpiped(execargs_t** programs, size_t n) {
 
 }
+
+
+}
+*/
