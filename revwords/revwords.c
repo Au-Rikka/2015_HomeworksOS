@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "helpers.h"
+#include <string.h>
 
 size_t const BUF_SIZE = 5000;
 
@@ -46,14 +47,14 @@ int main() {
                         return EXIT_FAILURE;
                     }
 
-                    memcpy(rev_buf, rev_buf + bytes_write, en - bytes_write);
+		    memmove(rev_buf, rev_buf + bytes_write, en - bytes_write);
                     en = en - bytes_write;
                     st = i + 1;
                 }
             }
 
             offset = offset + bytes_read; 
-            memcpy(buf, buf + st, offset - st);
+            memmove(buf, buf + st, offset - st);
             offset = offset - st;
             st = 0;
         }
