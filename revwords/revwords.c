@@ -16,7 +16,7 @@ int main() {
     int en = 0; //first free element in rev_buf 
 
     while (bytes_read > 0) {
-        bytes_read = read_until(STDIN_FILENO, buf + offset, BUF_SIZE, ' ');
+        bytes_read = read_until(STDIN_FILENO, buf + offset, BUF_SIZE - offset, ' ');
         if (bytes_read < 0) {
             perror("Input error");
             return EXIT_FAILURE;
@@ -27,19 +27,19 @@ int main() {
             for (i = offset; i < bytes_read + offset; i++) {
                 if (buf[i] == ' ') {
                     for (j = i - 1; j >= st; j--) {
-                        rev_buf[en] = buf[j];
-                        en++;
-                        if (en > BUF_SIZE) {
+                        if (en == BUF_SIZE) {
                             perror("Output error");
                             return EXIT_FAILURE;
                         }
+                        rev_buf[en] = buf[j];
+                        en++;
                     }
-                    rev_buf[en] = ' ';
-                    en++;
-                    if (en > BUF_SIZE) {
+                    if (en == BUF_SIZE) {
                         perror("Output error");
                         return EXIT_FAILURE;
                     }
+                    rev_buf[en] = ' ';
+                    en++;
 
                     bytes_write = write_(STDOUT_FILENO, rev_buf, en);
                     if (bytes_write < 0) {
@@ -47,7 +47,7 @@ int main() {
                         return EXIT_FAILURE;
                     }
 
-		    memmove(rev_buf, rev_buf + bytes_write, en - bytes_write);
+		            memmove(rev_buf, rev_buf + bytes_write, en - bytes_write);
                     en = en - bytes_write;
                     st = i + 1;
                 }
@@ -62,12 +62,12 @@ int main() {
 
     int j;
     for (j = offset - 1; j >= 0; j--) {
-        rev_buf[en] = buf[j];
-        en++;
-        if (en > BUF_SIZE) {
+        if (en == BUF_SIZE) {
             perror("Output error");
             return EXIT_FAILURE;
         }
+        rev_buf[en] = buf[j];
+        en++;
     }
 
     bytes_write = write_(STDOUT_FILENO, rev_buf, en);
