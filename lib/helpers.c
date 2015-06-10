@@ -90,8 +90,8 @@ int spawn(const char * file, char * const argv []) {
 
 ///////////////////////////////////////////////////////////////////////
 
-/*
-void exacargs_free(struct exacargs_t* ea, int kol {
+
+void execargs_free(struct execargs_t* ea, int kol) {
     #ifdef DEBUG
         if (ea == NULL) {
             abort();
@@ -108,7 +108,7 @@ void exacargs_free(struct exacargs_t* ea, int kol {
 }
 
 
-struct exacargs_t* exacargs_new(char** args, size_t kol) {
+struct execargs_t* execargs_new(char** args, size_t kol) {
     struct execargs_t* ea = (struct execargs_t*) malloc(sizeof(struct execargs_t));
     if (ea == NULL) {
         return NULL;
@@ -116,7 +116,7 @@ struct exacargs_t* exacargs_new(char** args, size_t kol) {
 
     ea->args = (char**) malloc((kol + 1) * sizeof(char*));
     if (ea == NULL) {
-        return NULL:
+        return NULL;
     }
     ea->kol = kol;
 
@@ -124,17 +124,17 @@ struct exacargs_t* exacargs_new(char** args, size_t kol) {
     for (i = 0; i < kol; i++) {
         ea->args[i] = args[i]; //strdup(args[i])
         if (ea->args[i] == NULL) {
-            exacargs_free(ea, i);
-            return NULL:
+            execargs_free(ea, i);
+            return NULL;
         }
     }    
-    ea->args[kol] = NULL:
+    ea->args[kol] = NULL;
 
     return ea;
 }
 
 
-int exec(execargs_t* args) {
+int exec(struct execargs_t* args) {
     pid_t p = fork();
 
     if (p == -1) {
@@ -144,7 +144,7 @@ int exec(execargs_t* args) {
 
     if (p == 0) {
         //child
-        return execvp(file, argv);
+        return execvp(args->args[0], args->args);
     }
     
     //parent
@@ -163,10 +163,7 @@ int exec(execargs_t* args) {
     }
 }
 
-int runpiped(execargs_t** programs, size_t n) {
-
+int runpiped(struct execargs_t** programs, size_t n) {
+    return 1;
 }
 
-
-}
-*/
