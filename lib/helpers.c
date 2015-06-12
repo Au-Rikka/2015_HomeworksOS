@@ -164,6 +164,57 @@ int exec(struct execargs_t* args) {
 }
 
 int runpiped(struct execargs_t** programs, size_t n) {
-    return 1;
+    int pipefd[n][2];
+    int res;
+    int i, j;
+
+    for (i = 0; i < n - 1; i++) {
+        res = pipe(pipefd[i]);
+
+        if (res == -1) {
+            return -1;
+        }
+    }
+
+    for (i = 0; i < n; i++) {
+        pid_t p = fork();
+
+        if (p == -1) {
+            perror("Cannot fork");
+            return -1;
+        }
+
+        if (p == 0) {
+            //child
+            if (i != 0) {
+                dup2(pipefd[i - 1][0], STDIN_FILENO);
+            }
+            if (i != n - 1) {
+                dup2(pipefd[i][1], STDOUT_FILENO);
+            }
+            res = exec(programs[i]);
+            if (res == -1) {
+                return -1;
+            }
+        }
+    
+        //parent
+        int status;
+        wait(&status);
+        if (status == -1) {
+            perror("Cannot wait");
+            return -1;
+        }
+
+        if (WIFEXITED(status)) {
+            return WEXITSTATUS(status);
+        } else {
+            perror("exit error");
+        return -1;
+        }
+
+    }
+
+    return 0;
 }
 
