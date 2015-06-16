@@ -19,7 +19,7 @@ struct execargs_t {
 	char** args;
 };
 
-struct execargs_t* execargs_new(char** args, size_t kol);
+struct execargs_t* execargs_new(char* str, size_t kol);
 void execargs_free(struct execargs_t* ea, int kol);
 int exec(struct execargs_t* args);
 int runpiped(struct execargs_t** programs, size_t n);

@@ -3,7 +3,7 @@
 #include <string.h>
 
 
-struct buf_t *buf_new(size_t capacity)  {
+struct buf_t* buf_new(size_t capacity)  {
 	struct buf_t* bufer = malloc(sizeof(struct buf_t));
 	if (bufer == NULL) {
 		return NULL;
@@ -59,7 +59,7 @@ ssize_t buf_fill(int fd, struct buf_t* buffer, size_t required) {
 		}
 	#endif 
 
-	size_t bytes_read = 1;
+	int bytes_read = 1;
 	if (required > buffer->capacity) {
 		required = buffer->capacity;
 	}
@@ -136,7 +136,7 @@ ssize_t buf_getline(int fd, struct buf_t* buffer, char* dest) {
 			buffer->size -= i;
 		} else {
 			buffer->size = 0;
-			k = buf_fill(fd, buffer, buffer->capacity);	
+			k = buf_fill(fd, buffer, buffer->capacity);
 		}
 	} while (is_done == 0 && k > 0);
 
