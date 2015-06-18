@@ -116,30 +116,28 @@ struct execargs_t* execargs_new(char* str, size_t kol) {
         if (str[i] == ' ' && i > 0 && str[i - 1] != ' ') {
             size++;
         }
-      //  printf("%c", str[i]);
     }
-    //printf("\n");
     if (str[kol - 1] != ' ') {
         size++;
     }
-    //printf("!!size->%d\n", size);
-
+    
     if (size == 0) {
         return NULL;
     }
 
+    
     struct execargs_t* ea = (struct execargs_t*) malloc(sizeof(struct execargs_t));
     if (ea == NULL) {
         return NULL;
     }
-
     ea->args = (char**) malloc((size + 1) * sizeof(char*));
     if (ea == NULL) {
+        free(ea);
         return NULL;
     }
-    ea->kol = size;
-   // printf("size = %zu\n", size);
     
+    ea->kol = size;
+
     int j = 0;
     int x = -1;
     for (i = 0; i < kol; i++) {
@@ -154,13 +152,11 @@ struct execargs_t* execargs_new(char* str, size_t kol) {
         }
 
         while (i < kol && str[i] != ' ') {
-           // printf("'%c'\n", str[i]);
             i++;
         }
         str[i] = 0;
         if (x != -1) {
             ea->args[j] = strdup(str + x);
-         //   printf("it's i lol -.>     %d\n", i);
             j++;
         }
     }    
@@ -172,12 +168,10 @@ struct execargs_t* execargs_new(char* str, size_t kol) {
 
 
 int exec(struct execargs_t* args) {
-//    printf ("hah -> '%s'\n", args->args[0]);
- //   if (args->args[1] == NULL) printf("ok\n");
     int res = execvp(args->args[0], args->args);
-   // printf("%s\n", "exec");
     return res;
 }
+
 
 int runpiped(struct execargs_t** programs, size_t n) {
     int pipefd[n][2];
@@ -186,8 +180,11 @@ int runpiped(struct execargs_t** programs, size_t n) {
 
     for (i = 0; i < n - 1; i++) {
         res = pipe(pipefd[i]);
-
         if (res == -1) {
+            for (j = 0; j < i; j++) {
+                close(pipefd[j][0]);
+                close(pipefd[j][1]);
+            }
             return -1;
         }
     }
@@ -196,6 +193,10 @@ int runpiped(struct execargs_t** programs, size_t n) {
         pid_t p = fork();
 
         if (p == -1) {
+            for (j = 0; j < n - 1; j++) {
+                close(pipefd[j][0]);
+                close(pipefd[j][1]);
+            }
             perror("Cannot fork");
             return -1;
         }
@@ -229,8 +230,8 @@ int runpiped(struct execargs_t** programs, size_t n) {
 
             res = exec(programs[i]);
             
-          //  close(pipefd[i - 1][0]);
-          //  close(pipefd[i][0]);
+            close(pipefd[i - 1][0]);
+            close(pipefd[i][0]);
 
             return res;
         }
@@ -245,8 +246,17 @@ int runpiped(struct execargs_t** programs, size_t n) {
         //parent
     }
 
-    int status;
+        for (i = 0; i < n - 1; i++) {
+        close(pipefd[i][0]);
+        close(pipefd[i][1]);
+    }
+
+
+
     for (i = 0; i < n; i++) {
+        int status;
+        wait(&status);
+    
         if (status == -1) {
             perror("Cannot wait");
             return -1;
@@ -257,12 +267,6 @@ int runpiped(struct execargs_t** programs, size_t n) {
             return -1;
         }
     }
-
-    for (i = 0; i < n - 1; i++) {
-        close(pipefd[i][0]);
-        close(pipefd[i][1]);
-    }
-
 
     return 0;
 }
