@@ -118,10 +118,11 @@ struct execargs_t* execargs_new(char* str, size_t kol) {
         }
       //  printf("%c", str[i]);
     }
-  //  printf("\n");
+    //printf("\n");
     if (str[kol - 1] != ' ') {
         size++;
     }
+    //printf("!!size->%d\n", size);
 
     if (size == 0) {
         return NULL;
@@ -137,22 +138,33 @@ struct execargs_t* execargs_new(char* str, size_t kol) {
         return NULL;
     }
     ea->kol = size;
-
+   // printf("size = %zu\n", size);
+    
     int j = 0;
+    int x = -1;
     for (i = 0; i < kol; i++) {
         while (i < kol && str[i] == ' ') {
             i++;
         }
         if (i < kol) {
-            ea->args[j] = str + i;
-            j++;
+            x = i;
+        } else {
+            x = -1;
+            break;
         }
+
         while (i < kol && str[i] != ' ') {
+           // printf("'%c'\n", str[i]);
             i++;
         }
         str[i] = 0;
+        if (x != -1) {
+            ea->args[j] = strdup(str + x);
+         //   printf("it's i lol -.>     %d\n", i);
+            j++;
+        }
     }    
-    
+
     ea->args[size] = NULL;
 
     return ea;
@@ -160,15 +172,17 @@ struct execargs_t* execargs_new(char* str, size_t kol) {
 
 
 int exec(struct execargs_t* args) {
+//    printf ("hah -> '%s'\n", args->args[0]);
+ //   if (args->args[1] == NULL) printf("ok\n");
     int res = execvp(args->args[0], args->args);
-    printf("%s\n", "exec");
+   // printf("%s\n", "exec");
     return res;
 }
 
 int runpiped(struct execargs_t** programs, size_t n) {
     int pipefd[n][2];
     int res;
-    int i;
+    int i, j;
 
     for (i = 0; i < n - 1; i++) {
         res = pipe(pipefd[i]);
@@ -190,42 +204,65 @@ int runpiped(struct execargs_t** programs, size_t n) {
             printf("%s %d %s %d\n", "i'm in child of", i, "process of ", n);
             //child
             //проверить пайп, если закрыт - вернуть 0
-           /* if (i != 0) {
+            if (i != 0) {
                 //int dup2(int oldfd, int newfd);
                 //dup2 делает newfd копией oldfd, закрывая newfd, если потребуется
                 //возвращает -1 при ошибке
+
                 close(STDIN_FILENO);
                 dup2(pipefd[i - 1][0], STDIN_FILENO);
             }
 
             if (i != n - 1) {
-                //printf("%s\n", "gonna redirect output stream");
                 close(STDOUT_FILENO);
                 dup2(pipefd[i][1], STDOUT_FILENO);
-                //printf("%s\n", "redirect output stream");
             }
-*/
-            printf("%s %s\n", "gonna exec:", programs[i]->args[0]);
+
+            for (j = 0; j < n - 1; j++) {
+                if (j != i - 1) {
+                    close(pipefd[j][0]);
+                } 
+                if (j != i) {
+                    close(pipefd[j][1]);
+                }
+            }
+
             res = exec(programs[i]);
-            printf("%s %d\n", "exec is done", res);
+            
+          //  close(pipefd[i - 1][0]);
+          //  close(pipefd[i][0]);
+
             return res;
+        }
+
+        if (i != 0) {
+            close(pipefd[i - 1][0]);
+        }
+        if ( i != n - 1) {
+            close(pipefd[i][1]);
         }
     
         //parent
-        int status;
-        wait(&status);
+    }
+
+    int status;
+    for (i = 0; i < n; i++) {
         if (status == -1) {
             perror("Cannot wait");
             return -1;
         }
 
-        if (WIFEXITED(status)) {
-            return WEXITSTATUS(status);
-        } else {
+        if (!WIFEXITED(status)) {
             perror("exit error");
             return -1;
         }
     }
+
+    for (i = 0; i < n - 1; i++) {
+        close(pipefd[i][0]);
+        close(pipefd[i][1]);
+    }
+
 
     return 0;
 }

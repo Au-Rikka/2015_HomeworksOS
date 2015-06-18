@@ -26,6 +26,10 @@ int main(int argc, char *argv[]) {
     while (1) {
         //can't read properly cose i'm stupid, that's why
         write_(STDOUT_FILENO, "$", 1);
+
+        st = 0;
+        en = 0;
+        kol = 0;
         
         bytes_read = 0;
         do {
@@ -33,7 +37,7 @@ int main(int argc, char *argv[]) {
             bytes_read++;
         } while (str[bytes_read - 1] != '\n');
         str[bytes_read - 1] = ' ';
-        
+        bytes_read--;
 
         /*bytes_read = buf_getline(STDIN_FILENO, buffer, str);
 
@@ -55,12 +59,16 @@ int main(int argc, char *argv[]) {
                     str[i] = ' ';
                     en++;
                 }
+
+              //  printf("kol -> %d\n", en - st);
         
                 progs[kol] = execargs_new(str + st, en - st);
-           /*     printf("%d\n", progs[kol]->kol);
+               /* 
+                printf("%d\n", progs[kol]->kol);
                 for (j = 0; j <= progs[kol]->kol; j++) {
-                    printf("%d%s%d\n", 1, progs[kol]->args[j], 1);
-                } */
+                    printf("'%s'\n", progs[kol]->args[j]);
+                } 
+*/
                 if (progs[kol] == NULL) {
                     return EXIT_FAILURE;
                 }
