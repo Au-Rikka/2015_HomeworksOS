@@ -83,6 +83,7 @@ int main(int argc, char *argv[]) {
 
         if (res == -1) {
             printf("%s\n", "something gone wrong");
+            buf_free(buffer);
             return EXIT_FAILURE;
         }
 
@@ -94,7 +95,7 @@ int main(int argc, char *argv[]) {
         printf("%s\n", "everything is fine");
     }
 
-    buf_free(buffer);
 
+    buf_free(buffer);
     return EXIT_SUCCESS;
 }

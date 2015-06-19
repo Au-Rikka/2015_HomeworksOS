@@ -12,7 +12,7 @@
 #include "bufio.h"
 
 
-#define LISTEN_BACKLOG 50
+#define LISTEN_BACKLOG 100
 
 size_t const BUF_SIZE = 4096;
 
@@ -32,10 +32,17 @@ int main(int argc, char** argv) {
 
     int q, socket_fd;
 
-/////////////////////////////-SOCKET CREATION
+    struct buf_t* my_buf = buf_new(BUF_SIZE);
+
+    if (my_buf == NULL) {
+        perror("Could not make buffer");
+        return EXIT_FAILURE;
+    }
+
+////////////////////////////////////////////////////////////////////////////-SOCKET CREATION
 
     hints.ai_family = AF_UNSPEC;    /* Allow IPv4 or IPv6 */
-    hints.ai_socktype = SOCK_DGRAM; /* Datagram socket */
+    hints.ai_socktype = SOCK_STREAM; /* Datagram socket */
     hints.ai_flags = AI_PASSIVE;    /* For wildcard IP address */
     hints.ai_protocol = 0;          /* Any protocol */
     hints.ai_canonname = NULL;
@@ -47,6 +54,12 @@ int main(int argc, char** argv) {
         perror("Could not getaddrinfo\n");
         return EXIT_FAILURE;
     }
+
+    /*  
+        getaddrinfo() вернетсписок адресных структур.
+        Будем пробовать их по очереди, пока удачно не сбиндимся.
+        Если socket или bind падает, закрываем сокет и пробуем следующий адрес из списка.
+    */
 
     for (rp = result; rp != NULL; rp = rp->ai_next) {
         socket_fd = socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
@@ -71,13 +84,28 @@ int main(int argc, char** argv) {
         return EXIT_FAILURE;
     }
     
-////////////////////////////-WAITING FOR ACCEPT
+////////////////////////////////////////////////////////////////////////////-WAITING FOR ACCEPT
+
+    /*
+        Теперь можем принимать входящие подключения по одному через accept.
+    */
 
     struct sockaddr_in client;
     socklen_t client_size = sizeof(client);
 
     while (1) {
+        /*
+            Извлекается первый запрос на соединение из очереди ожидающих соединений
+                для слушающего сокета socket_fd.
+            Создается новый подключенный сокет и возвращается файловы дескриптор,
+                ссылающийся на сокет.
+            Новый сокет не слушает. 
+            На socket_fd это никак не влияет.
+
+        */
+
         int temp_fd = accept(socket_fd, (struct sockaddr*)&client, &client_size);
+        
         if (temp_fd == -1) {
             perror("Could not accept\n");
             return EXIT_FAILURE;       
@@ -100,13 +128,6 @@ int main(int argc, char** argv) {
                 return EXIT_FAILURE;       
             }
 
-            struct buf_t* my_buf = buf_new(BUF_SIZE);
-
-            if (my_buf == NULL) {
-                perror("Could not make buffer");
-                return EXIT_FAILURE;
-            }
-
             int kol;
             while (1) {
                 kol = buf_fill(file_fd, my_buf, BUF_SIZE);
@@ -120,20 +141,21 @@ int main(int argc, char** argv) {
                 }
             }
 
-            buf_free(my_buf);
-
+            close(temp_fd);
+            
             if (kol == -1) {
+                buf_free(my_buf);
                 perror("File read/write problems\n");
                 return EXIT_FAILURE;       
             }
 
-            close(temp_fd);
             return EXIT_SUCCESS;            
         }
 
         close(temp_fd);
     }
 
+    buf_free(my_buf);
     close(socket_fd);
 
     return EXIT_SUCCESS;

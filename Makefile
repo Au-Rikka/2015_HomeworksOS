@@ -7,6 +7,7 @@ all:
 	make -C bufcat/
 	make -C buffilter/
 	make -C simplesh/
+	make -C filesender/
 	
 clean:
 	make clean -C lib/
