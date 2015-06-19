@@ -32,13 +32,6 @@ int main(int argc, char** argv) {
 
     int q, socket_fd;
 
-    struct buf_t* my_buf = buf_new(BUF_SIZE);
-
-    if (my_buf == NULL) {
-        perror("Could not make buffer");
-        return EXIT_FAILURE;
-    }
-
 ////////////////////////////////////////////////////////////////////////////-SOCKET CREATION
 
     hints.ai_family = AF_UNSPEC;    /* Allow IPv4 or IPv6 */
@@ -128,6 +121,13 @@ int main(int argc, char** argv) {
                 return EXIT_FAILURE;       
             }
 
+            struct buf_t* my_buf = buf_new(BUF_SIZE);
+
+            if (my_buf == NULL) {
+                perror("Could not make buffer");
+                return EXIT_FAILURE;
+            }
+
             int kol;
             while (1) {
                 kol = buf_fill(file_fd, my_buf, BUF_SIZE);
@@ -142,9 +142,9 @@ int main(int argc, char** argv) {
             }
 
             close(temp_fd);
+            buf_free(my_buf);
             
             if (kol == -1) {
-                buf_free(my_buf);
                 perror("File read/write problems\n");
                 return EXIT_FAILURE;       
             }
@@ -155,7 +155,6 @@ int main(int argc, char** argv) {
         close(temp_fd);
     }
 
-    buf_free(my_buf);
     close(socket_fd);
 
     return EXIT_SUCCESS;
