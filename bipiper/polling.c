@@ -84,20 +84,19 @@ int change_poll_list(int i) {
 //swap curent pair of sockets with the last one
 //i should be the nomber of first socket in pair
 
-    printf("Changing poll list\n");
+    //printf("Changing poll list\n");
 
-    poll_list[i] = poll_list[kol - 1];
-    buf_free(bufs[i]);
-    bufs[i] = bufs[kol - 1];
-    //closed[i] = closed[kol - 1];
+    poll_list[i + 1] = poll_list[kol - 1];
+    bufs[i + 1] = bufs[kol - 1];
+    buf_free(bufs[i + 1]);
+    close(poll_list[i + 1].fd);
+
                         
-    poll_list[i - 1] = poll_list[kol - 2];
-    buf_free(bufs[i - 1]);
-    bufs[i - 1] = bufs[kol - 2];
-    //closed[i - 1] = closed[kol - 2];
+    poll_list[i] = poll_list[kol - 2];
+    bufs[i] = bufs[kol - 2];
+    buf_free(bufs[i]);
+    close(poll_list[i].fd);
 
-    i--;
-   
     return i;
 }
 
@@ -137,9 +136,10 @@ int main(int argc, char** argv) {
         client_size[i] = sizeof(client[i]);
     }
 
+    int first_fd;
 
     while (1) {
-        printf("------------------------------------------\n");
+       // printf("------------------------------------------\n");
         int res = poll(poll_list, kol, TIMEOUT);
         if (res == -1) {
             if (errno != EINTR) {
@@ -152,40 +152,39 @@ int main(int argc, char** argv) {
             if (kol < MAX_N) {
                 if ((poll_list[0].revents & POLLIN) != 0) {
                     //на первый порт что-то пришло
-                    printf("first port has something\n");
-                    poll_list[kol].fd = accept(poll_list[0].fd, (struct sockaddr*)&client[kol], &client_size[kol]);
-                    if (poll_list[kol].fd == -1) {
+            //        printf("first port has something\n");
+                    first_fd = accept(poll_list[0].fd, (struct sockaddr*)&client[kol], &client_size[kol]);
+                    if (first_fd == -1) {
                         perror("Could not accept\n");
                         return EXIT_FAILURE;
                     }
-                    kol++;
                     //закрыть первый порт, открыть второй
                     poll_list[0].events = 0;
                     poll_list[1].events = POLLIN;
-
-                    poll_list[kol - 1].events = 0;
                 }
 
                 if ((poll_list[1].revents & POLLIN) != 0) {
                     //на второй порт что-то пришло
-                    printf("second port has something\n");
-                    poll_list[kol].fd = accept(poll_list[1].fd, (struct sockaddr*)&client[kol], &client_size[kol]);
-                    if (poll_list[kol].fd == -1) {
+          //          printf("second port has something\n");
+                    poll_list[kol + 1].fd = accept(poll_list[1].fd, (struct sockaddr*)&client[kol + 1], &client_size[kol + 1]);
+                    if (poll_list[kol + 1].fd == -1) {
                         perror("Could not accept\n");
                         return EXIT_FAILURE;
                     }
+                    //подготовить пару сокетов к обмену данными
+                    
+                    poll_list[kol].fd = first_fd;
+                    poll_list[kol].events = POLLIN;
+                    bufs[kol] = buf_new(BUF_SIZE);
                     kol++;
+
+                    poll_list[kol].events = POLLIN;
+                    bufs[kol] = buf_new(BUF_SIZE);
+                    kol++;
+
                     //закрыть второй порт, открыть первый
                     poll_list[0].events = POLLIN;
                     poll_list[1].events = 0;
-                    //подготовить пару сокетов к обмену данными
-                    poll_list[kol - 1].events = POLLIN;
-                    bufs[kol - 1] = buf_new(BUF_SIZE);
-
-                    poll_list[kol - 2].events = POLLIN;
-                    bufs[kol - 2] = buf_new(BUF_SIZE);
-     //               fd_closed[kol - 2] = 0;
-      //              fd_closed[kol - 1] = 0;
                 } 
             } else {
                 //все занято, так что просто
@@ -197,46 +196,29 @@ int main(int argc, char** argv) {
             //обходим остальные сокеты
             i = 2;
             while (i < kol) {
-                printf("gonna check %d port\n", i);
-                
+             //   printf("gonna check %d port\n", i);
+
                 int j;
                 if (i % 2 == 0) {
                     j = i + 1;
                 } else {
                     j = i - 1;
                 }
-                
+
                 if (poll_list[i].revents & POLLIN) {
-                    printf("there is something to READ in %d\n", i);
+                    //printf("there is something to READ in %d\n", i);
                     int res = buf_fill(poll_list[i].fd, bufs[i], 1);
+                    //printf("buf after is %d\n", bufs[i]->size);
 
                     if (res <= 0) {
+                    //   shutdown(poll_list[i].fd, SHUT_RD);
                         poll_list[i].events &= (~POLLIN);
                         
                         if (bufs[i]->size == 0) {
+                     //     shutdown(poll_list[j].fd, SHUT_WR);
                             poll_list[j].events &= (~POLLOUT);
                         }
                     } else {
-/*
-                    if (res <= 0) {
-                        //если ничего не считалось
-                        //вырубить чтение в i
-                        shutdown(poll_list[i].fd, SHUT_RD);
-                        fd_closed[i] = fd_closed[i] | 1;
-                        poll_list[i].events = poll_list[i].events & (~POLLIN);
-            
-                        //если буфер еще и пуст, вырубить запись в j
-                        if (poll_list[i].size == 0 || res == -1) {
-                            shutdown(poll_list[j].fd, SHUT_WR);
-                            fd_closed[j] = fd_closed[j] | 2;
-                            poll_list[j].events = poll_list[j].events & (~POLLOUT);
-                        }
-                    } else {
-                        //что-то считалось, включить ожидание записи в j
-                        poll_list[j].events = poll_list[j].events | POLLOUT;
-                    }
-  */                       
-
                         if (bufs[i]->size == bufs[i]->capacity) {
                             poll_list[i].events &= (~POLLIN);
                         }
@@ -248,75 +230,46 @@ int main(int argc, char** argv) {
 
 
                 if (poll_list[i].revents & POLLOUT) {
-                    printf("there is something to WRIGHT in %d from %d\n", i, j);
-                    printf("%d\n", bufs[j]->size);
+                  //  printf("there is something to WRIGHT in %d from %d\n", i, j);
+                  //  printf("buf before is %d\n", bufs[j]->size);
+
+                   // int prev_size = bufs[j]->size;
                     int res = buf_flush(poll_list[i].fd, bufs[j], 1);
-                    printf("WOW I've just done buf_flush\n");
-
-                    if (res <= 0) {
-                    //        shutdown(poll_list[i].fd, SHUT_WR);
-                    //  нужен, если ловить POLLHUP
-                    //        fd_closed[i] = fd_closed[i] | 2;
-                    //  неебу, нужна ли вообще эта фигня
-
-                        poll_list[i].events &= (~POLLOUT);
-                        if (res == -1 || bufs[j]->size != 0) {
-                            poll_list[j].events &= (~POLLOUT);
-                        }
-                    } else {
                     
-    /*                if (res <= 0) {
-                        //ничего не вывелось
-                        if (bufs[j].size > 0 || res == -1) {
-                            //вырубить запись в i
-                            shutdown(poll_list[i].fd, SHUT_WR);
-                            fd_closed[i] = fd_closed[i] | 2;
-                            poll_list[i].events = poll_list[i].events & (~POLLOUT);
-                            //чтение в j, кстати, тоже больше не нужно
-                            shutdown(poll_list[j].fd, SHUT_RD);
-                            fd_closed[j] = fd_closed[j] | 1;
-                            poll_list[j].events = poll_list[j].events & (~POLLIN);
-                        } else {
-                            if ((fd_closed[j] & 1) == 1) {
-
-                            }
-                        }
-
                     if (res <= 0) {
-                        poll_list[j].events = poll_list[j].events & (!POLLOUT);
+                     // shutdown(poll_list[i].fd, SHUT_WR);    
+                        poll_list[i].events &= (~POLLOUT);
+
+                        if (res == -1 || bufs[j]->size != 0) {
+                        //  shutdown(poll_list[j].fd, SHUT_RD);
+                            poll_list[j].events &= (~POLLIN);
+                        }
                     } else {
-                        poll_list[j].events = poll_list[j].events | POLLOUT;
-                    }
-*/
                         if (bufs[j]->size < bufs[j]->capacity) {
                             poll_list[j].events |= POLLIN;
                         }
                         if (bufs[j]->size == 0) {
-                            poll_list[j].events &= (~POLLOUT);
+                            poll_list[i].events &= (~POLLOUT);
                         }
                     }
                 }
 
 
-                printf("Counting sum and checking this pair\n");
-                if (i < kol && j < kol) {
-                    int sum = (poll_list[i].events & POLLOUT) + (poll_list[i].events & POLLIN); 
-                    sum += (poll_list[j].events & POLLOUT) + (poll_list[j].events & POLLIN); 
-                    if (sum == 0) {
-                        //пара больше не нужна, выкинем ее из списка
-                        if (i % 2 == 0) {
-                            i = change_poll_list(i);
-                        } else {
-                            i = change_poll_list(j);
-                        }
-                        kol -= 2;
+              //  printf("Counting sum and checking this pair\n");
+                int sum = (poll_list[i].events & POLLOUT) + (poll_list[i].events & POLLIN); 
+                sum += (poll_list[j].events & POLLOUT) + (poll_list[j].events & POLLIN); 
+                if (sum == 0) {
+                    //пара больше не нужна, выкинем ее из списка
+                    if (i % 2 == 0) {
+                        i = change_poll_list(i);
                     } else {
-                        i++;
+                        i = change_poll_list(j);
                     }
-                }   else {
+                    kol -= 2;
+                } else {
                     i++;
                 }
-            }
+            }      
         }
     }
 
