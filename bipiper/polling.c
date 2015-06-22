@@ -86,17 +86,16 @@ int change_poll_list(int i) {
 
     //printf("Changing poll list\n");
 
+    close(poll_list[i + 1].fd);
+    buf_free(bufs[i + 1]);
     poll_list[i + 1] = poll_list[kol - 1];
     bufs[i + 1] = bufs[kol - 1];
-    buf_free(bufs[i + 1]);
-    close(poll_list[i + 1].fd);
 
-                        
+    close(poll_list[i].fd);                        
+    buf_free(bufs[i]);
     poll_list[i] = poll_list[kol - 2];
     bufs[i] = bufs[kol - 2];
-    buf_free(bufs[i]);
-    close(poll_list[i].fd);
-
+   
     return i;
 }
 
@@ -152,7 +151,7 @@ int main(int argc, char** argv) {
             if (kol < MAX_N) {
                 if ((poll_list[0].revents & POLLIN) != 0) {
                     //на первый порт что-то пришло
-            //        printf("first port has something\n");
+                 //   printf("first port has something\n");
                     first_fd = accept(poll_list[0].fd, (struct sockaddr*)&client[kol], &client_size[kol]);
                     if (first_fd == -1) {
                         perror("Could not accept\n");
@@ -165,7 +164,7 @@ int main(int argc, char** argv) {
 
                 if ((poll_list[1].revents & POLLIN) != 0) {
                     //на второй порт что-то пришло
-          //          printf("second port has something\n");
+                   // printf("second port has something\n");
                     poll_list[kol + 1].fd = accept(poll_list[1].fd, (struct sockaddr*)&client[kol + 1], &client_size[kol + 1]);
                     if (poll_list[kol + 1].fd == -1) {
                         perror("Could not accept\n");
@@ -174,11 +173,11 @@ int main(int argc, char** argv) {
                     //подготовить пару сокетов к обмену данными
                     
                     poll_list[kol].fd = first_fd;
-                    poll_list[kol].events = POLLIN;
+                    poll_list[kol].events = POLLIN | POLLHUP;
                     bufs[kol] = buf_new(BUF_SIZE);
                     kol++;
 
-                    poll_list[kol].events = POLLIN;
+                    poll_list[kol].events = POLLIN | POLLHUP;
                     bufs[kol] = buf_new(BUF_SIZE);
                     kol++;
 
@@ -196,7 +195,7 @@ int main(int argc, char** argv) {
             //обходим остальные сокеты
             i = 2;
             while (i < kol) {
-             //   printf("gonna check %d port\n", i);
+ //               printf("gonna check %d port\n", i);
 
                 int j;
                 if (i % 2 == 0) {
@@ -206,16 +205,16 @@ int main(int argc, char** argv) {
                 }
 
                 if (poll_list[i].revents & POLLIN) {
-                    //printf("there is something to READ in %d\n", i);
+                   // printf("there is something to READ in %d\n", i);
                     int res = buf_fill(poll_list[i].fd, bufs[i], 1);
                     //printf("buf after is %d\n", bufs[i]->size);
 
                     if (res <= 0) {
-                    //   shutdown(poll_list[i].fd, SHUT_RD);
+                        //shutdown(poll_list[i].fd, SHUT_RD);
                         poll_list[i].events &= (~POLLIN);
                         
                         if (bufs[i]->size == 0) {
-                     //     shutdown(poll_list[j].fd, SHUT_WR);
+                          //  shutdown(poll_list[j].fd, SHUT_WR);
                             poll_list[j].events &= (~POLLOUT);
                         }
                     } else {
@@ -230,22 +229,22 @@ int main(int argc, char** argv) {
 
 
                 if (poll_list[i].revents & POLLOUT) {
-                  //  printf("there is something to WRIGHT in %d from %d\n", i, j);
-                  //  printf("buf before is %d\n", bufs[j]->size);
+                    //printf("there is something to WRIGHT in %d from %d\n", i, j);
+                   // printf("buf before is %d\n", bufs[j]->size);
 
-                   // int prev_size = bufs[j]->size;
+                    int prev_size = bufs[j]->size;
                     int res = buf_flush(poll_list[i].fd, bufs[j], 1);
                     
                     if (res <= 0) {
-                     // shutdown(poll_list[i].fd, SHUT_WR);    
+                     //   shutdown(poll_list[i].fd, SHUT_WR);    
                         poll_list[i].events &= (~POLLOUT);
 
-                        if (res == -1 || bufs[j]->size != 0) {
-                        //  shutdown(poll_list[j].fd, SHUT_RD);
-                            poll_list[j].events &= (~POLLIN);
-                        }
+                        //if (res == -1 || bufs[j]->size != 0) {
+                       // shutdown(poll_list[j].fd, SHUT_RD);
+                        poll_list[j].events &= (~POLLIN);
+                        //}
                     } else {
-                        if (bufs[j]->size < bufs[j]->capacity) {
+                        if (bufs[j]->size < bufs[j]->capacity && !(poll_list[i].revents & POLLHUP)) {
                             poll_list[j].events |= POLLIN;
                         }
                         if (bufs[j]->size == 0) {
