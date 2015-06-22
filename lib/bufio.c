@@ -130,13 +130,16 @@ ssize_t buf_getline(int fd, struct buf_t* buffer, char* dest) {
 		}
 
 		if (i < buf_size(buffer)) {
+			dest[bytes_write] = '\n';
+			bytes_write++;
+
 			is_done = 1;
 			i++;
 			memmove(buffer->buf, buffer->buf + i, buffer->size - i);
 			buffer->size -= i;
 		} else {
 			buffer->size = 0;
-			k = buf_fill(fd, buffer, buffer->capacity);
+			k = buf_fill(fd, buffer, 1);
 		}
 	} while (is_done == 0 && k > 0);
 

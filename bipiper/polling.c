@@ -16,11 +16,11 @@
 #define LISTEN_BACKLOG 100
 #define BUF_SIZE 4096
 #define TIMEOUT -1
-#define MAX_N 256
+#define MAX_N 4
 
-struct pollfd poll_list[MAX_N];
-struct buf_t* bufs[MAX_N];
-int fd_closed[MAX_N];
+struct pollfd poll_list[MAX_N + 1];
+struct buf_t* bufs[MAX_N + 1];
+int fd_closed[MAX_N + 1];
 nfds_t kol;
 int i, j;
 

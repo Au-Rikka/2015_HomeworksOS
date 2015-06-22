@@ -102,7 +102,6 @@ void execargs_free(struct execargs_t* ea, int kol) {
     for (i = 0; i < kol; i++) {
         free(ea->args[i]);
     }
-
     free(ea->args);
     free(ea);
 }
@@ -146,6 +145,7 @@ struct execargs_t* execargs_new(char* str, size_t kol) {
         while (i < kol && str[i] == ' ') {
             i++;
         }
+
         if (i < kol) {
             x = i;
         } else {
@@ -154,33 +154,38 @@ struct execargs_t* execargs_new(char* str, size_t kol) {
         }
 
         while (i < kol && str[i] != ' ') {
-           // printf("'%c'\n", str[i]);
             i++;
         }
         str[i] = 0;
+        
         if (x != -1) {
-            ea->args[j] = strdup(str + x);
+            ea->args[j] = (char*) malloc((i - x + 1) * sizeof(char));
+            if (ea->args[j] == NULL) {
+                execargs_free(ea, j);
+                return NULL;
+            }
+            memcpy(ea->args[j], str + x, i - x + 1);
          //   printf("it's i lol -.>     %d\n", i);
             j++;
         }
     }    
 
     ea->args[size] = NULL;
-
     return ea;
 }
 
 
 int exec(struct execargs_t* args) {
-//    printf ("hah -> '%s'\n", args->args[0]);
- //   if (args->args[1] == NULL) printf("ok\n");
+    fprintf (stderr, "hah -> '%s'\n", args->args[0]);
+    if (args->args[1] == NULL) fprintf(stderr, "ok\n");
     int res = execvp(args->args[0], args->args);
-   // printf("%s\n", "exec");
+    fprintf(stderr, "%s\n", "exec");
     return res;
 }
 
 int runpiped(struct execargs_t** programs, size_t n) {
     int pipefd[n][2];
+    int pids[n + 1];
     int res;
     int i, j;
 
@@ -209,12 +214,10 @@ int runpiped(struct execargs_t** programs, size_t n) {
                 //dup2 делает newfd копией oldfd, закрывая newfd, если потребуется
                 //возвращает -1 при ошибке
 
-                close(STDIN_FILENO);
                 dup2(pipefd[i - 1][0], STDIN_FILENO);
             }
 
             if (i != n - 1) {
-                close(STDOUT_FILENO);
                 dup2(pipefd[i][1], STDOUT_FILENO);
             }
 
@@ -228,49 +231,33 @@ int runpiped(struct execargs_t** programs, size_t n) {
             }
 
             res = exec(programs[i]);
-            
-          //  close(pipefd[i - 1][0]);
-          //  close(pipefd[i][0]);
-
             return res;
+        } else {
+            pids[i] = p;
         }
-
-        /*if (i != 0) {
-            close(pipefd[i - 1][0]);
-        }
-        if ( i != n - 1) {
-            close(pipefd[i][1]);
-        }*/
-    
-        //parent
     }
 
     for (int i = 0; i < n - 1; i++) {
-        close(pipefd[j][0]);
-        close(pipefd[j][1]);    
+        close(pipefd[i][0]);
+        close(pipefd[i][1]);    
     }
 
     int status;
+    int flag = 0;
     for (i = 0; i < n; i++) {
-        wait(&status);
+        waitpid(pids[i], &status, 0);
 
         if (status == -1) {
             perror("Cannot wait");
-            return -1;
+            flag = -1;
         }
 
-        if (!WIFEXITED(status)) {
+        if (WEXITSTATUS(status) != 0) {
             perror("exit error");
-            return -1;
+            flag = -1;
         }
     }
 
-    for (i = 0; i < n - 1; i++) {
-        close(pipefd[i][0]);
-        close(pipefd[i][1]);
-    }
-
-
-    return 0;
+    return flag;
 }
 
