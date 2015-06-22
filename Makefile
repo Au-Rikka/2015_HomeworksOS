@@ -8,7 +8,7 @@ all:
 	make -C buffilter/
 	make -C simplesh/
 	make -C filesender/
-	make -C forking/
+	make -C bipiper/
 	
 clean:
 	make clean -C lib/
@@ -20,4 +20,4 @@ clean:
 	make clean -C buffilter/
 	make clean -C simplesh/
 	make clean -C filesender/
-	make clean -C forking/
+	make clean -C bipiper/
