@@ -8,6 +8,14 @@
 size_t const BUF_SIZE = 4096;
 int main(int argc, char *argv[]) {
 
+    struct sigaction sa, old_sa;   
+    sa.sa_flags = 0; //флаги, которые влияют на поведение процесса
+    sigemptyset(&sa.sa_mask); // маска сигналов, блокируемых при обработке
+    sa.sa_handler = SIG_IGN; //DIG_DFL, SIG_IGN, или указатель на функцию
+    
+    sigaction(SIGINT, &sa, &old_sa);
+
+
     struct buf_t* buffer = buf_new(BUF_SIZE);
     if (buffer == NULL) {
         return EXIT_FAILURE;
@@ -25,15 +33,21 @@ int main(int argc, char *argv[]) {
 
         if (bytes_read < 0) {
             perror("input error");
+            sigaction(SIGINT, &old_sa, NULL);
+            buf_free(buffer);
             return EXIT_FAILURE;
         }
 
         if (bytes_read == 0) {
+            sigaction(SIGINT, &old_sa, NULL);
+            buf_free(buffer);
             return EXIT_SUCCESS;
         }
 
         if (str[bytes_read - 1] != '\n') {
             perror("line is too long");
+            sigaction(SIGINT, &old_sa, NULL);
+            buf_free(buffer);
             return EXIT_FAILURE;
         }
 
@@ -46,31 +60,42 @@ int main(int argc, char *argv[]) {
                 en = i + 1;
                 str[i] = ' ';       
 
-                printf("%d, %d\n", st, en);
                 progs[kol] = execargs_new(str + st, en - st);
                 if (progs[kol] == NULL) {
-                    return EXIT_FAILURE;
+                    for (j = 0; j < kol; j++) {
+                        execargs_free(progs[j], progs[j]->kol + 2);
+                    }
+                    kol = -1;
+                    break;
                 }
                 st = en;
                 kol++;
             }
         }
 
-        printf("%s\n", "array is ready, gonna run pipe");
+        if (kol > 0) {
+            printf("%s\n", "array is ready, gonna run pipe");
       
-        res = runpiped(progs, kol);
+            res = runpiped(progs, kol);
 
-        if (res == -1) {
-            printf("%s\n", "something gone wrong");
+            if (res == -1) {
+                printf("%s\n", "something gone wrong");
+            }
+
+            for (i = 0; i < kol; i++) {
+                execargs_free(progs[i], progs[i]->kol + 2);
+            }
         }
+        
+        
 
-        for (i = 0; i < kol; i++) {
-            execargs_free(progs[i], progs[i]->kol);
-        }
-
+        break;
         printf("%s\n", "everything is fine");
     }
 
+    sigaction(SIGINT, &old_sa, NULL);
     buf_free(buffer);
+
+
     return EXIT_SUCCESS;
 }

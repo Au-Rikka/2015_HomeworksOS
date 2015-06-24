@@ -102,6 +102,7 @@ void execargs_free(struct execargs_t* ea, int kol) {
     for (i = 0; i < kol; i++) {
         free(ea->args[i]);
     }
+ 
     free(ea->args);
     free(ea);
 }
@@ -115,14 +116,11 @@ struct execargs_t* execargs_new(char* str, size_t kol) {
         if (str[i] == ' ' && i > 0 && str[i - 1] != ' ') {
             size++;
         }
-      //  printf("%c", str[i]);
     }
-    //printf("\n");
     if (str[kol - 1] != ' ') {
         size++;
     }
-    //printf("!!size->%d\n", size);
-
+   
     if (size == 0) {
         return NULL;
     }
@@ -134,10 +132,10 @@ struct execargs_t* execargs_new(char* str, size_t kol) {
 
     ea->args = (char**) malloc((size + 1) * sizeof(char*));
     if (ea == NULL) {
+        free(ea);
         return NULL;
     }
     ea->kol = size;
-   // printf("size = %zu\n", size);
     
     int j = 0;
     int x = -1;
@@ -165,7 +163,6 @@ struct execargs_t* execargs_new(char* str, size_t kol) {
                 return NULL;
             }
             memcpy(ea->args[j], str + x, i - x + 1);
-         //   printf("it's i lol -.>     %d\n", i);
             j++;
         }
     }    
@@ -176,23 +173,56 @@ struct execargs_t* execargs_new(char* str, size_t kol) {
 
 
 int exec(struct execargs_t* args) {
-    fprintf (stderr, "hah -> '%s'\n", args->args[0]);
-    if (args->args[1] == NULL) fprintf(stderr, "ok\n");
     int res = execvp(args->args[0], args->args);
-    fprintf(stderr, "%s\n", "exec");
     return res;
 }
 
+
+int pids[100000 + 1];
+int kol_pids;
+int pipefd[100000][2];
+int big_n;
+struct sigaction old_sa;
+
+void close_pipes(int kol) {
+    int i;
+    for (i = 0; i < kol; i++) {
+        close(pipefd[i][0]);                
+        close(pipefd[i][1]);                
+    }
+}
+
+static void handler(int sig, siginfo_t *si, void *unused) {
+    int i;
+    close_pipes(big_n - 1);
+    for (i = 0; i < kol_pids; i++) {
+        kill(pids[i], SIGKILL);
+    }
+
+    sigaction(SIGINT, &old_sa, NULL);
+    //ченить еще
+}
+
 int runpiped(struct execargs_t** programs, size_t n) {
-    int pipefd[n][2];
-    int pids[n + 1];
     int res;
     int i, j;
+    int flag = 0;
+
+    big_n = n;
+
+    struct sigaction sa;   
+    sa.sa_flags = 0; //флаги, которые влияют на поведение процесса
+    sigemptyset(&sa.sa_mask); // маска сигналов, блокируемых при обработке
+    sa.sa_handler = handler; //DIG_DFL, SIG_IGN, или указатель на функцию
+    
+    sigaction(SIGINT, &sa, &old_sa);
+
+    kol_pids = 0;
 
     for (i = 0; i < n - 1; i++) {
         res = pipe(pipefd[i]);
-
         if (res == -1) {
+            close_pipes(i);
             return -1;
         }
     }
@@ -201,6 +231,10 @@ int runpiped(struct execargs_t** programs, size_t n) {
         pid_t p = fork();
 
         if (p == -1) {
+            close_pipes(n - 1);
+            for (j = 0; j < i; j++) {
+                kill(pids[j], SIGKILL);
+            }
             perror("Cannot fork");
             return -1;
         }
@@ -234,6 +268,7 @@ int runpiped(struct execargs_t** programs, size_t n) {
             return res;
         } else {
             pids[i] = p;
+            kol_pids++;
         }
     }
 
@@ -243,8 +278,7 @@ int runpiped(struct execargs_t** programs, size_t n) {
     }
 
     int status;
-    int flag = 0;
-    for (i = 0; i < n; i++) {
+    for (i = 0; i < kol_pids; i++) {
         waitpid(pids[i], &status, 0);
 
         if (status == -1) {
@@ -257,6 +291,10 @@ int runpiped(struct execargs_t** programs, size_t n) {
             flag = -1;
         }
     }
+
+
+    //возвратить все как было
+    sigaction(SIGINT, &old_sa, NULL);
 
     return flag;
 }

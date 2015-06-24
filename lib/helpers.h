@@ -1,9 +1,15 @@
 #ifndef HELPERS_H
 #define HELPERS_H
 
+#ifndef _POSIX_C_SOURCE 
+#define _POSIX_C_SOURCE 199309L
+#endif
+
 #include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <signal.h>
+#include <string.h> 
 #include <sys/wait.h>
 #include <sys/types.h>
 
